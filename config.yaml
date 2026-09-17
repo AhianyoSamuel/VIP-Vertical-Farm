@@ -94,7 +94,7 @@ firebase:
   enabled: true
   credentials_path: "firebase-credentials.json"
   storage_bucket: "vip-farm-35099.firebasestorage.app"
-  device_id: "jetson-grower-01"
+  device_id: "raspPi4"
 
 # Alerts
 alerts:

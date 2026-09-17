@@ -50,7 +50,7 @@ class FirebaseSync:
             firebase_admin.initialize_app(cred, {"storageBucket": bucket_name})
             self.db = firestore.client()
             self.bucket = storage.bucket()
-            self.device_id = self.config.get("device_id", "pi-grower-01")
+            self.device_id = self.config.get("device_id", "raspPi4")
             logger.info("Firebase connected (bucket=%s, device=%s)", bucket_name, self.device_id)
         except Exception as e:
             logger.error("Firebase init failed: %s", e)
@@ -149,13 +149,20 @@ class FirebaseSync:
                     time.sleep(5)
                     self._upload_queue.put((item_type, data))
 
+    def _build_image_remote_path(self, trigger_type: str, filename: str) -> str:
+        category = "dashboard" if "dashboard" in str(trigger_type).lower() else "plant"
+        return f"grows/{self.device_id}/image3/{category}/{filename}"
+
     def _do_upload_image(self, data: dict):
         local_path = data["local_path"]
         if not Path(local_path).exists():
             return
 
         filename = Path(local_path).name
-        remote_path = f"grows/{self.device_id}/images2/{filename}"
+        remote_path = self._build_image_remote_path(
+            data.get("trigger_type", "checkin"),
+            filename,
+        )
 
         blob = self.bucket.blob(remote_path)
         blob.upload_from_filename(local_path, content_type="image/jpeg")
