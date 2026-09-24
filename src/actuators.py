@@ -1,16 +1,23 @@
 import asyncio
 import logging
 import os
+import platform
 import threading
 import time
 from datetime import datetime
 
+GPIO = None
+
 try:
     import RPi.GPIO as GPIO
 except ImportError:
-    try:
-        import Jetson.GPIO as GPIO
-    except ImportError:
+    # Raspberry Pi builds should never use Jetson.GPIO. Use Jetson support only on actual Jetson hosts.
+    if os.path.exists("/etc/nv_tegra_release") or platform.machine().startswith("aarch64"):
+        try:
+            import Jetson.GPIO as GPIO
+        except ImportError:
+            GPIO = None
+    else:
         GPIO = None
 
 from tplinkcloud import TPLinkDeviceManager # type: ignore
@@ -53,6 +60,13 @@ class Actuators:
     # ── GPIO (grow light + dashboard) ────────────────────────────────────────
 
     def _init_gpio(self):
+        if GPIO is None:
+            logger.warning(
+                "GPIO library not available. This build is expected on Raspberry Pi with RPi.GPIO installed. "
+                "Install the Pi dependencies before running the hardware controller."
+            )
+            return
+
         GPIO.setmode(GPIO.BOARD)
         GPIO.setwarnings(False)
 
@@ -148,9 +162,25 @@ class Actuators:
 
     # ── Grow light (physical relay, Active-Low) ───────────────────────────────
 
+    def _gpio_ready(self) -> bool:
+        if GPIO is None:
+            logger.warning("GPIO hardware unavailable; skipping relay command")
+            return False
+        return True
+
     def turn_on_lights(self, minutes: float) -> dict:
         max_min = self.config.get("light", {}).get("max_on_minutes", 1440)
         minutes = max(1, min(max_min, minutes))
+
+        if not self._gpio_ready():
+            result = {
+                "action": "turn_on_lights",
+                "minutes": round(minutes, 1),
+                "timestamp": datetime.now().isoformat(),
+                "simulated": True,
+            }
+            self._log_action(result)
+            return result
 
         if self._light_timer and self._light_timer.is_alive():
             self._light_timer.cancel()
@@ -171,6 +201,11 @@ class Actuators:
         return result
 
     def turn_off_lights(self) -> dict:
+        if not self._gpio_ready():
+            result = {"action": "turn_off_lights", "timestamp": datetime.now().isoformat(), "simulated": True}
+            self._log_action(result)
+            return result
+
         if self._light_timer and self._light_timer.is_alive():
             self._light_timer.cancel()
 
@@ -182,12 +217,18 @@ class Actuators:
 
     def _lights_auto_off(self):
         logger.info("lights auto-off timer fired")
+        if not self._gpio_ready():
+            return
         GPIO.output(self.light_pin, OFF_STATE)
         self._light_on = False
 
     # ── Dashboard relay ───────────────────────────────────────────────────────
 
     def turn_on_dashboard(self) -> dict:
+        if not self._gpio_ready():
+            result = {"action": "turn_on_dashboard", "timestamp": datetime.now().isoformat(), "simulated": True}
+            self._log_action(result)
+            return result
         GPIO.output(self.dash_pin, ON_STATE)
         self._dash_on = True
         result = {"action": "turn_on_dashboard", "timestamp": datetime.now().isoformat()}
@@ -195,6 +236,10 @@ class Actuators:
         return result
 
     def turn_off_dashboard(self) -> dict:
+        if not self._gpio_ready():
+            result = {"action": "turn_off_dashboard", "timestamp": datetime.now().isoformat(), "simulated": True}
+            self._log_action(result)
+            return result
         GPIO.output(self.dash_pin, OFF_STATE)
         self._dash_on = False
         result = {"action": "turn_off_dashboard", "timestamp": datetime.now().isoformat()}

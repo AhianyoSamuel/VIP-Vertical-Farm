@@ -1,5 +1,13 @@
+from pathlib import Path
+
 from src.camera import Camera
 from src.firebase_sync import FirebaseSync
+
+
+def test_requirements_use_rpi_gpio_not_jetson_gpio():
+    text = Path(__file__).resolve().parents[1].joinpath("requirements.txt").read_text()
+    assert "RPi.GPIO" in text
+    assert "Jetson.GPIO" not in text
 
 
 def test_build_remote_image_path_uses_device_root_and_separated_categories():
