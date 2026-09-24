@@ -5,14 +5,25 @@ import threading
 import time
 from datetime import datetime
 
-import Jetson.GPIO as GPIO
-from tplinkcloud import TPLinkDeviceManager
+try:
+    import RPi.GPIO as GPIO
+except ImportError:
+    try:
+        import Jetson.GPIO as GPIO
+    except ImportError:
+        GPIO = None
+
+from tplinkcloud import TPLinkDeviceManager # type: ignore
 
 logger = logging.getLogger(__name__)
 
 # Active-Low logic for the physical grow-light relay (BOARD Pin 13)
-ON_STATE  = GPIO.LOW
-OFF_STATE = GPIO.HIGH
+if GPIO is not None:
+    ON_STATE  = GPIO.LOW
+    OFF_STATE = GPIO.HIGH
+else:
+    ON_STATE = 0
+    OFF_STATE = 1
 
 
 class Actuators:

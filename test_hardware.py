@@ -1,5 +1,5 @@
 """
-Hardware test for the VIP Vertical Farm — Jetson Orin Nano.
+Hardware test for the VIP Vertical Farm — Raspberry Pi.
 
 Tests both hardware actuators:
   1. Physical relay → Grow Light  (BOARD Pin 13, Active-Low)
@@ -9,7 +9,7 @@ Usage:
     sudo venv/bin/python3 test_hardware.py
 
 Requires:
-    - Pinmux overlay applied (run apply_pinmux_fix.sh and reboot) for the light relay
+    - Raspberry Pi GPIO configured and accessible
     - KASA_USERNAME and KASA_PASSWORD set in .env (or in the shell environment)
     - Device name in Kasa app matching kasa_cloud.device_alias in config.yaml
 """
@@ -42,25 +42,27 @@ except Exception as e:
     DEVICE_ALIAS = "Water Pump"
 
 # ── Argument parsing ─────────────────────────────────────────────────────────
-parser = argparse.ArgumentParser(description="VIP Farm hardware test")
-parser.add_argument("--alias", default=DEVICE_ALIAS,
-                    help="Kasa device alias to test (overrides config.yaml)")
-parser.add_argument("--pulse", type=float, default=15.0,
-                    help="Seconds to hold each relay/plug ON during the test (default: 15)")
-parser.add_argument("--skip-light", action="store_true", help="Skip the light relay test")
-parser.add_argument("--skip-pump",  action="store_true", help="Skip the Kasa pump test")
-args = parser.parse_args()
-
-DEVICE_ALIAS = args.alias
-PULSE_SECS   = args.pulse
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="VIP Farm hardware test")
+    parser.add_argument("--alias", default=DEVICE_ALIAS,
+                        help="Kasa device alias to test (overrides config.yaml)")
+    parser.add_argument("--pulse", type=float, default=15.0,
+                        help="Seconds to hold each relay/plug ON during the test (default: 15)")
+    parser.add_argument("--skip-light", action="store_true", help="Skip the light relay test")
+    parser.add_argument("--skip-pump",  action="store_true", help="Skip the Kasa pump test")
+    return parser.parse_args()
 
 # ── GPIO imports ─────────────────────────────────────────────────────────────
 try:
-    import Jetson.GPIO as GPIO
+    import RPi.GPIO as GPIO
     GPIO_AVAILABLE = True
 except ImportError:
-    print("WARNING: Jetson.GPIO not found — light relay test will be skipped.")
-    GPIO_AVAILABLE = False
+    try:
+        import Jetson.GPIO as GPIO
+        GPIO_AVAILABLE = True
+    except ImportError:
+        print("WARNING: GPIO library not found — light relay test will be skipped.")
+        GPIO_AVAILABLE = False
 
 # ── Kasa imports ─────────────────────────────────────────────────────────────
 try:
@@ -90,7 +92,7 @@ def test_light_relay() -> bool:
     print()
 
     if not GPIO_AVAILABLE:
-        print(f"  {SKIP} Jetson.GPIO not available.")
+        print(f"  {SKIP} GPIO library not available.")
         return False
 
     try:
@@ -188,6 +190,11 @@ def test_kasa_pump() -> bool:
 # ────────────────────────────────────────────────────────────────────────────
 
 def main():
+    args = parse_args()
+    global DEVICE_ALIAS, PULSE_SECS
+    DEVICE_ALIAS = args.alias
+    PULSE_SECS = args.pulse
+
     print("=" * 55)
     print("  VIP Vertical Farm — Hardware Test")
     print("=" * 55)

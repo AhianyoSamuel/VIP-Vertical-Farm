@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 """
-Prepare a microSD card for the Jetson Nano after flashing JetPack OS.
+Prepare a Raspberry Pi after flashing Raspberry Pi OS.
 
 This script does NOT flash the OS itself — use one of these to flash first:
-  - NVIDIA SDK Manager (GUI): https://developer.nvidia.com/sdk-manager
-  - balenaEtcher with a JetPack image
+  - Raspberry Pi Imager
+  - balenaEtcher with a Raspberry Pi OS image
   - dd on Linux/Mac
 
-After the OS is flashed and the Jetson has booted + completed initial setup,
+After the OS is flashed and the Raspberry Pi has booted + completed initial setup,
 run this script to configure Wi-Fi, clone the project, and set up the service.
 
 Usage:
@@ -38,15 +38,15 @@ SERVICE_NAME = "ai-grower"
 
 def parse_args():
     p = argparse.ArgumentParser(
-        description="Configure a Jetson Nano for VIP Vertical Farm (post-flash)"
+        description="Configure a Raspberry Pi for VIP Vertical Farm (post-flash)"
     )
-    p.add_argument("--host", required=True, help="Jetson IP address or hostname")
-    p.add_argument("--user", default="jetson", help="SSH username (default: jetson)")
+    p.add_argument("--host", required=True, help="Raspberry Pi IP address or hostname")
+    p.add_argument("--user", default="pi", help="SSH username (default: pi)")
     p.add_argument("--password", default=None, help="SSH password (prompted if not given)")
     p.add_argument("--ssid", help="Wi-Fi network name to connect to")
     p.add_argument("--wifi-password", help="Wi-Fi password (prompted if SSID given)")
     p.add_argument("--embed-env", action="store_true",
-                   help="Copy .env and firebase-credentials.json to the Jetson")
+                   help="Copy .env and firebase-credentials.json to the Raspberry Pi")
     return p.parse_args()
 
 
@@ -61,8 +61,8 @@ def connect(host, user, password):
     except Exception as e:
         print(f"Failed to connect: {e}")
         print("\nTroubleshooting:")
-        print("  1. Have you completed the JetPack first-boot setup?")
-        print("  2. Is the Jetson connected to the network (Ethernet or Wi-Fi)?")
+        print("  1. Have you completed the Raspberry Pi first-boot setup?")
+        print("  2. Is the Raspberry Pi connected to the network (Ethernet or Wi-Fi)?")
         print("  3. Try connecting via Ethernet first, then configure Wi-Fi.")
         sys.exit(1)
 
@@ -138,8 +138,8 @@ def setup_python_env(ssh, project_dir):
     run_cmd(ssh, f"{project_dir}/venv/bin/pip install --upgrade pip -q")
     run_cmd(ssh, f"{project_dir}/venv/bin/pip install -r {project_dir}/requirements.txt -q", timeout=600)
 
-    print("  Installing Jetson.GPIO...")
-    run_cmd(ssh, f"{project_dir}/venv/bin/pip install Jetson.GPIO -q", check=False)
+    print("  Installing RPi.GPIO...")
+    run_cmd(ssh, f"{project_dir}/venv/bin/pip install RPi.GPIO -q", check=False)
 
 
 def setup_gpio_permissions(ssh, user):
@@ -149,13 +149,8 @@ def setup_gpio_permissions(ssh, user):
 
 
 def apply_pinmux_fix(ssh, project_dir):
-    print("\n--- Applying Pinmux Fix (All GPIO pins v2) ---")
-    run_cmd(ssh, f"chmod +x {project_dir}/apply_pinmux_fix.sh")
-    run_cmd(ssh, f"sudo bash {project_dir}/apply_pinmux_fix.sh", check=False)
-    print("  Pinmux DTBO compiled and installed to /boot.")
-    print("  ACTION REQUIRED: after setup completes, SSH into the Jetson and run:")
-    print("    sudo /opt/nvidia/jetson-io/jetson-io.py")
-    print("  Select 'All GPIO pins bidirectional v2', save, and reboot.")
+    print("\n--- GPIO setup ---")
+    print("  Raspberry Pi GPIO is available directly on the 40-pin header; no Jetson pinmux overlay is required.")
 
 
 def create_data_dirs(ssh, project_dir):
@@ -209,33 +204,32 @@ def embed_credentials(ssh, project_dir):
 def print_instructions():
     print("""
 ============================================================
-  JETSON NANO SETUP — Before running this script
+  RASPBERRY PI SETUP — Before running this script
 ============================================================
 
-  1. Flash JetPack OS to your microSD card using one of:
-     - NVIDIA SDK Manager (recommended):
-       https://developer.nvidia.com/sdk-manager
-     - balenaEtcher with a JetPack image:
-       https://developer.nvidia.com/embedded/jetpack
-     - Or on Linux: sudo dd if=jetpack.img of=/dev/sdX bs=4M
+  1. Flash Raspberry Pi OS to your microSD card using one of:
+     - Raspberry Pi Imager (recommended):
+       https://www.raspberrypi.com/software/
+     - balenaEtcher with a Raspberry Pi OS image
+     - Or on Linux: sudo dd if=2024-xx-xx-raspios-bookworm.img of=/dev/sdX bs=4M
 
-  2. Insert the SD card into the Jetson Nano and power it on
+  2. Insert the SD card into the Raspberry Pi and power it on
 
   3. Complete the first-boot setup (language, user, password)
      - Connect a monitor + keyboard for this step
-     - OR use headless setup via USB serial connection
+     - OR use headless setup via SSH
 
-  4. Connect the Jetson to your network:
+  4. Connect the Raspberry Pi to your network:
      - Ethernet: plug in a cable
      - Wi-Fi: use --ssid flag with this script
 
-  5. Find the Jetson's IP address:
-     - On the Jetson: hostname -I
+  5. Find the Raspberry Pi's IP address:
+     - On the Raspberry Pi: hostname -I
      - On your router's admin page
      - Or: ping <hostname>.local
 
   6. Run this script:
-     python flash_jetson.py --host <jetson-ip> --embed-env
+     python flash_jetson.py --host <pi-ip> --embed-env
 
 ============================================================
 """)
@@ -245,7 +239,7 @@ def main():
     args = parse_args()
 
     print("=" * 60)
-    print("  VIP Vertical Farm — Jetson Nano Setup")
+    print("  VIP Vertical Farm — Raspberry Pi Setup")
     print("=" * 60)
 
     password = args.password
@@ -277,7 +271,7 @@ def main():
     # GPIO permissions
     setup_gpio_permissions(ssh, args.user)
 
-    # Apply pinmux fix so hardware GPIOs are unlocked across reboots
+    # GPIO pins are ready to use on Raspberry Pi without extra pinmux changes
     apply_pinmux_fix(ssh, project_dir)
 
     # Embed credentials if requested
@@ -303,7 +297,7 @@ def main():
     print(f"  Logs: sudo journalctl -u {SERVICE_NAME} -f")
     print(f"  Dashboard: http://{ip}:8080")
     if not args.embed_env:
-        print(f"\n  NOTE: You still need to create .env on the Jetson:")
+        print(f"\n  NOTE: You still need to create .env on the Raspberry Pi:")
         print(f"    scp .env {args.user}@{ip}:{project_dir}/.env")
     print(f"\n  To start the service:")
     print(f"    ssh {args.user}@{ip}")

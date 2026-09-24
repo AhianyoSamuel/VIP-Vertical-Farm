@@ -1,10 +1,10 @@
 """
-Push code to the Jetson Nano and set everything up.
-Run this from your laptop while the Jetson is on the same network.
+Push code to the Raspberry Pi and set everything up.
+Run this from your laptop while the Raspberry Pi is on the same network.
 
 Usage:
     python setup_device.py --host 192.168.1.50
-    python setup_device.py --host 192.168.1.50 --user jetson --password jetson
+    python setup_device.py --host 192.168.1.50 --user pi --password raspberry
 """
 
 import argparse
@@ -33,8 +33,6 @@ PUSH_ITEMS = [
     ".env",
     "firebase-credentials.json",
     ".env.example",
-    "apply_pinmux_fix.sh",
-    "all_gpio_pins_v2.dts",
     "test_hardware.py",
 ]
 
@@ -43,9 +41,9 @@ SKIP_PATTERNS = ["__pycache__", ".pyc", "data/images/", "data/logs/", "venv/"]
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(description="Set up the Jetson Nano for VIP Vertical Farm")
-    parser.add_argument("--host", required=True, help="Jetson hostname or IP address")
-    parser.add_argument("--user", default="jetson", help="SSH username (default: jetson)")
+    parser = argparse.ArgumentParser(description="Set up the Raspberry Pi for VIP Vertical Farm")
+    parser.add_argument("--host", required=True, help="Raspberry Pi hostname or IP address")
+    parser.add_argument("--user", default="pi", help="SSH username (default: pi)")
     parser.add_argument("--password", default=None, help="SSH password (will prompt if not given)")
     parser.add_argument("--skip-deps", action="store_true", help="Skip installing dependencies")
     parser.add_argument("--code-only", action="store_true", help="Only push code, skip all setup")
@@ -63,9 +61,9 @@ def connect(host, user, password):
     except Exception as e:
         print(f"Failed to connect: {e}")
         print("\nTroubleshooting:")
-        print("  1. Is the Jetson on and connected to the same network?")
-        print("  2. Try using the Jetson's IP address instead of hostname")
-        print("  3. Is SSH enabled on the Jetson?")
+        print("  1. Is the Raspberry Pi on and connected to the same network?")
+        print("  2. Try using the Raspberry Pi's IP address instead of hostname")
+        print("  3. Is SSH enabled on the Raspberry Pi?")
         sys.exit(1)
 
 
@@ -159,9 +157,9 @@ def setup_python_env(ssh, project_dir):
     run_cmd(ssh, f"{project_dir}/venv/bin/pip install --upgrade pip -q")
     run_cmd(ssh, f"{project_dir}/venv/bin/pip install -r {project_dir}/requirements.txt -q")
 
-    # install Jetson.GPIO for hardware relay control
-    print("  Installing Jetson.GPIO...")
-    run_cmd(ssh, f"{project_dir}/venv/bin/pip install Jetson.GPIO -q", check=False)
+    # install GPIO support for hardware relay control
+    print("  Installing RPi.GPIO...")
+    run_cmd(ssh, f"{project_dir}/venv/bin/pip install RPi.GPIO -q", check=False)
 
 
 def setup_gpio_permissions(ssh, user):
@@ -171,13 +169,8 @@ def setup_gpio_permissions(ssh, user):
 
 
 def apply_pinmux_fix(ssh, project_dir):
-    print("\n--- Applying Pinmux Fix (All GPIO pins v2) ---")
-    run_cmd(ssh, f"chmod +x {project_dir}/apply_pinmux_fix.sh")
-    run_cmd(ssh, f"sudo bash {project_dir}/apply_pinmux_fix.sh", check=False)
-    print("  Pinmux DTBO compiled and installed to /boot.")
-    print("  ACTION REQUIRED: SSH into the Jetson and run:")
-    print("    sudo /opt/nvidia/jetson-io/jetson-io.py")
-    print("  Select 'All GPIO pins bidirectional v2', save, and reboot.")
+    print("\n--- GPIO setup ---")
+    print("  Raspberry Pi GPIO is available directly on the 40-pin header; no Jetson pinmux overlay is required.")
 
 
 def create_data_dirs(ssh, project_dir):

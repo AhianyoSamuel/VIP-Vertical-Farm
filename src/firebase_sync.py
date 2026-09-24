@@ -137,7 +137,7 @@ class FirebaseSync:
                     consecutive_auth_failures += 1
                     backoff = min(60 * consecutive_auth_failures, 300)  # max 5 min
                     logger.error(
-                        "Firebase auth error (attempt %d) — Jetson clock is likely out of sync. "
+                        "Firebase auth error (attempt %d) — the device clock is likely out of sync. "
                         "Fix: sudo timedatectl set-time \"YYYY-MM-DD HH:MM:SS\". "
                         "Retrying in %ds. Error: %s",
                         consecutive_auth_failures, backoff, e,

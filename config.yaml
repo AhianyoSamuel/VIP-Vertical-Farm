@@ -35,7 +35,7 @@ hardware_specs:
   flow_rate_ml_s: 168
   tray_tilt_degrees: 19
 
-# GPIO pin numbers (BOARD — Jetson Orin Nano 40-pin header)
+# GPIO pin numbers (BOARD — Raspberry Pi 40-pin header)
 # VCC → Pin 2 (5V), GND → Pin 6
 # Signal Pins: Light = 13  (Pump is now Kasa cloud — see kasa_cloud section below)
 gpio:

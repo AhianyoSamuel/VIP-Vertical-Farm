@@ -6,7 +6,7 @@ An AI-powered plant growing system that uses Google Gemini to make autonomous gr
 
 ```
 ┌─────────────────────────────────────────────────────┐
-│           NVIDIA Jetson Orin Nano                    │
+│           Raspberry Pi (4/5)                       │
 │                                                      │
 │  ┌──────────┐  ┌──────────┐  ┌──────────────────┐  │
 │  │ Sensors   │  │ Cameras  │  │ Actuators        │  │
@@ -92,7 +92,7 @@ Every 24 hours the AI compresses its full decision history into a structured sum
 
 | Component | Purpose | Interface |
 |-----------|---------|-----------|
-| NVIDIA Jetson Orin Nano | Main controller | — |
+| Raspberry Pi 4/5 | Main controller | — |
 | USB webcam × 2 | Plant imaging + dashboard reading | USB |
 | 5V relay module | Grow light control | GPIO BOARD Pin 13 (Active-Low) |
 | LED grow light | Supplemental lighting | Via relay |
@@ -113,39 +113,37 @@ Water pump → Kasa HS103 smart plug → wall outlet
 
 > **Active-Low logic**: pulling Pin 13 LOW turns the relay ON. The code sets `ON_STATE = GPIO.LOW`.
 
-### Pinmux (Orin Nano only — required before first use)
+### GPIO setup
 
-The Orin Nano locks GPIO pins at the hardware level by default. You must apply the DTS overlay once:
+Use the standard 40-pin header on the Raspberry Pi. No Jetson pinmux overlay is required.
 
 ```bash
-sudo bash apply_pinmux_fix.sh
-sudo /opt/nvidia/jetson-io/jetson-io.py
-# Select: Configure Jetson 40pin Header
-# Select: All GPIO pins bidirectional v2
-# Select: Save and reboot to reconfigure pins
+# Confirm the GPIO interface is available
+sudo raspi-config
+# Enable I2C, SPI, and GPIO if needed
 ```
 
 ## Setup
 
-### 1. Flash JetPack OS
+### 1. Flash Raspberry Pi OS
 
-Flash NVIDIA JetPack to a microSD card using:
-- [NVIDIA SDK Manager](https://developer.nvidia.com/sdk-manager) (recommended)
-- [balenaEtcher](https://etcher.balena.io/) with a JetPack image
+Flash Raspberry Pi OS to a microSD card using:
+- [Raspberry Pi Imager](https://www.raspberrypi.com/software/)
+- [balenaEtcher](https://etcher.balena.io/) with a Raspberry Pi OS image
 
-### 2. Deploy to Jetson
+### 2. Deploy to Raspberry Pi
 
-After JetPack first-boot, run from your laptop:
+After the first boot, run from your laptop:
 
 ```bash
 git clone https://github.com/CoolGuy2982/VIP-Vertical-Farm.git
 cd VIP-Vertical-Farm
 
 # Full first-time setup (installs deps, creates systemd service)
-python flash_jetson.py --host <jetson-ip> --embed-env
+python flash_jetson.py --host <pi-ip> --embed-env
 
-# Push code updates to an already-configured Jetson
-python setup_device.py --host <jetson-ip>
+# Push code updates to an already-configured Raspberry Pi
+python setup_device.py --host <pi-ip>
 ```
 
 ### 3. Configure
@@ -160,7 +158,7 @@ kasa_cloud:
   device_alias: "Water Pump"   # must match the name in your Kasa app exactly
 ```
 
-**`.env`** — create this file on the Jetson:
+**`.env`** — create this file on the Raspberry Pi:
 ```
 GEMINI_API_KEY=your-gemini-api-key
 API_SECRET_KEY=your-api-secret

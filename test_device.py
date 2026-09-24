@@ -1,6 +1,6 @@
 """
-Test all hardware functions on the Jetson Nano remotely.
-Run this from your laptop while the Jetson is on the same network.
+Test all hardware functions on the Raspberry Pi remotely.
+Run this from your laptop while the Raspberry Pi is on the same network.
 
 Usage:
     python test_device.py --host 192.168.1.50
@@ -28,9 +28,9 @@ PROJECT_DIR = "/home/{user}/VIP-Vertical-Farm"
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(description="Test Jetson Nano hardware remotely")
-    parser.add_argument("--host", required=True, help="Jetson hostname or IP address")
-    parser.add_argument("--user", default="jetson", help="SSH username (default: jetson)")
+    parser = argparse.ArgumentParser(description="Test Raspberry Pi hardware remotely")
+    parser.add_argument("--host", required=True, help="Raspberry Pi hostname or IP address")
+    parser.add_argument("--user", default="pi", help="SSH username (default: pi)")
     parser.add_argument("--password", default=None, help="SSH password")
     parser.add_argument("--test", default="all",
                         choices=["all", "cameras", "relays", "gemini", "api", "firebase"],
@@ -52,7 +52,7 @@ def connect(host, user, password):
 
 
 def run_device_script(ssh, project_dir, script, timeout=30, use_sudo=False):
-    """Run a Python script on the Jetson inside the venv."""
+    """Run a Python script on the Raspberry Pi inside the venv."""
     python = f"{project_dir}/venv/bin/python3"
     if use_sudo:
         cmd = f"cd {project_dir} && sudo {python} -c \"{script}\""
@@ -149,7 +149,7 @@ print(json.dumps(results))
 def _run_relay_test(ssh, project_dir, name, pin):
     """Pulse one relay pin and print full output + any errors."""
     script = (
-        f"import Jetson.GPIO as GPIO; import time; "
+        f"import RPi.GPIO as GPIO; import time; "
         f"GPIO.setmode(GPIO.BOARD); GPIO.setwarnings(False); "
         f"GPIO.setup({pin}, GPIO.OUT); GPIO.output({pin}, GPIO.HIGH); "
         f"print('pin {pin} set HIGH (relay OFF)'); time.sleep(0.2); "
@@ -186,7 +186,7 @@ def test_relays(ssh, project_dir):
 
     print("\n  Troubleshooting:")
     print("    No click at all   → check wiring: BOARD pin 7 (light), 11 (pump)")
-    print("                        VCC → Jetson pin 1 (3.3V), GND → pin 6")
+    print("                        VCC → Raspberry Pi pin 1 (3.3V), GND → pin 6")
     print("    Click but no load → check NO terminal on relay, check load power supply")
     print("    Permission error  → sudo usermod -aG gpio $USER  then reboot")
 
@@ -197,7 +197,7 @@ def test_relays_inverted(ssh, project_dir):
     """Test if relays are active-low (inverted)."""
     print("\n  Testing if relays are INVERTED (active-low) on pump pin (BOARD 11)...")
     script = (
-        "import Jetson.GPIO as GPIO; import time; "
+        "import RPi.GPIO as GPIO; import time; "
         "GPIO.setmode(GPIO.BOARD); GPIO.setwarnings(False); "
         "GPIO.setup(11, GPIO.OUT); GPIO.output(11, GPIO.HIGH); time.sleep(0.2); "
         "print('trying LOW'); GPIO.output(11, GPIO.LOW); time.sleep(2); "
