@@ -44,6 +44,15 @@ def _is_token_limit_error(exc: BaseException) -> bool:
     return "input token count exceeds" in msg or "exceeds the maximum number of tokens" in msg
 
 
+def _is_rate_limit_error(exc: BaseException) -> bool:
+    """Detect Gemini's '429 RESOURCE_EXHAUSTED' rate limit error."""
+    msg = str(exc).lower()
+    code = getattr(exc, "status_code", None) or getattr(exc, "code", None)
+    if code == 429 or "429" in msg or "resource_exhausted" in msg or "too many requests" in msg:
+        return True
+    return False
+
+
 class AIGrower:
     def __init__(self, config: dict, base_dir: str):
         self.config = config
@@ -128,19 +137,24 @@ class AIGrower:
             # Collect historical plant photos BEFORE capturing new ones
             historical_plant = self.camera.get_recent_plant_images(count=4)
 
-            # Turn light on for plant photo so auto-exposure has time to settle
+            # Failsafe: test camera availability before toggling lights
+            dashboard_image = self.camera.capture_dashboard(trigger_type)
+            test_plant = self.camera.capture_plant("test")
+
+            if not dashboard_image and not test_plant:
+                self._record_alert("Both cameras failed. Hardware failure.", "critical")
+                self.scheduler.schedule_checkin(60, "Retry after hardware failure")
+                return
+
             light_was_off = not self.actuators._light_on
-            if light_was_off:
+            if light_was_off and test_plant:
                 self.actuators.turn_on_lights(5)
                 time.sleep(20)  # let camera auto-exposure fully settle
+                
+            plant_image = self.camera.capture_plant(trigger_type) if test_plant else None
 
-            images = self.camera.capture_both(trigger_type)
-
-            if light_was_off:
+            if light_was_off and test_plant:
                 self.actuators.turn_off_lights()
-
-            plant_image = images.get("plant")
-            dashboard_image = images.get("dashboard")
 
             if plant_image:
                 self.firebase.upload_image(plant_image, f"{trigger_type}_plant")
@@ -187,7 +201,10 @@ class AIGrower:
 
         except Exception as e:
             logger.error("[%s] FAILED: %s", trigger_type.upper(), e, exc_info=True)
-            self.scheduler.schedule_checkin(10, f"Retry after error: {e}")
+            if _is_rate_limit_error(e):
+                self.scheduler.schedule_checkin(60, f"Retry after 429 rate limit: {e}")
+            else:
+                self.scheduler.schedule_checkin(10, f"Retry after error: {e}")
 
         finally:
             self._checkin_lock = False

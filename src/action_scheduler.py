@@ -114,6 +114,13 @@ class ActionScheduler:
 
     def schedule_checkin(self, minutes: int, reason: str = "") -> ScheduledAction:
         minutes = max(self.min_checkin_minutes, min(self.max_checkin_minutes, minutes))
+        
+        # Deduplicate: cancel any existing pending checkins to prevent runaway loops
+        with self._lock:
+            for action in self._heap:
+                if action.action_type == "checkin" and action.id not in self._cancelled:
+                    self._cancelled.add(action.id)
+                    
         return self.schedule("checkin", minutes * 60, reason=reason)
 
     def schedule_observe(self, delay_minutes: float, context: str,

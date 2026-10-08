@@ -81,7 +81,7 @@ context:
 
 # Scheduler
 scheduler:
-  min_checkin_minutes: 1
+  min_checkin_minutes: 5
   max_checkin_minutes: 480
 
 # Local API server
