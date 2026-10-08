@@ -15,10 +15,10 @@ def test_build_remote_image_path_uses_device_root_and_separated_categories():
     sync.device_id = "raspPi4"
 
     assert sync._build_image_remote_path("checkin_plant", "plant_checkin_20260101_010203.jpg") == (
-        "grows/raspPi4/image3/plant/plant_checkin_20260101_010203.jpg"
+        "grows/raspPi4/image4/plant/plant_checkin_20260101_010203.jpg"
     )
     assert sync._build_image_remote_path("checkin_dashboard", "dashboard_checkin_20260101_010203.jpg") == (
-        "grows/raspPi4/image3/dashboard/dashboard_checkin_20260101_010203.jpg"
+        "grows/raspPi4/image4/dashboard/dashboard_checkin_20260101_010203.jpg"
     )
 
 

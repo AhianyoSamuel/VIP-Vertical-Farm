@@ -219,7 +219,7 @@ Then clear the matching data in Firebase Console (Firestore + Storage).
 | GET | `/api/alerts` | Alert log |
 | GET | `/api/health` | Health check |
 
-Camera captures are stored under `data/images/` in the project directory. The website can display the latest plant and dashboard captures directly from the corresponding `GET /api/camera/.../latest` endpoints.
+Camera captures are stored under `data/images/` locally and uploaded to Firebase Storage under `grows/raspPi4/image4/plant/` or `grows/raspPi4/image4/dashboard/`. Each Firestore image record includes the full Firebase Storage object path in `storage_path`; website clients should use that field to load images rather than constructing an `image3` path. The `GET /api/camera/.../latest` endpoints continue to serve the latest local captures.
 
 ## AI Tools
 
