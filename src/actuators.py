@@ -91,15 +91,31 @@ class Actuators:
     def _run_async(self, coro):
         """Run an async coroutine from synchronous code.
 
-        Safe in all calling contexts:
-        - The grower scheduler fires handlers in a plain threading.Thread
-          (no event loop present).
-        - FastAPI sync `def` routes are dispatched by anyio into a threadpool
-          worker thread (also no event loop present).
-        Neither path lives on uvicorn's main-thread event loop, so
-        asyncio.run() always creates a fresh loop without conflict.
+        If called while an event loop is active (for example, during shutdown
+        from Uvicorn's signal handler), run it on a worker thread with its own
+        event loop because asyncio.run() cannot run in the current loop.
         """
-        return asyncio.run(coro)
+        try:
+            asyncio.get_running_loop()
+        except RuntimeError:
+            return asyncio.run(coro)
+
+        result = []
+        error = []
+
+        def run_in_worker():
+            try:
+                result.append(asyncio.run(coro))
+            except Exception as exc:
+                error.append(exc)
+
+        worker = threading.Thread(target=run_in_worker)
+        worker.start()
+        worker.join()
+
+        if error:
+            raise error[0]
+        return result[0]
 
     async def _get_pump_device(self):
         """Authenticate against Kasa cloud and return the pump device.
