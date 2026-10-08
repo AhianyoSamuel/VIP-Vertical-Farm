@@ -60,7 +60,7 @@ class AIGrower:
 
         self.sensors = Sensors(config)
         self.actuators = Actuators(config)
-        self.camera = Camera(config)
+        self.camera = Camera(config, base_dir)
         self.context = ContextManager(base_dir, config)
         self.growth = GrowthTracker(base_dir)
         self.gemini = GeminiClient(config)

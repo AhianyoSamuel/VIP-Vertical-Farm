@@ -210,6 +210,8 @@ __marimo__/
 data/images/
 data/logs/
 !data/logs/.gitkeep
+!data/images/
+data/images/*
 !data/images/.gitkeep
 
 # Firebase credentials (never commit)

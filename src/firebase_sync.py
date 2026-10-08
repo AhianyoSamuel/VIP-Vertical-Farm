@@ -151,7 +151,7 @@ class FirebaseSync:
 
     def _build_image_remote_path(self, trigger_type: str, filename: str) -> str:
         category = "dashboard" if "dashboard" in str(trigger_type).lower() else "plant"
-        return f"grows/{self.device_id}/image3/{category}/{filename}"
+        return f"grows/{self.device_id}/image4/{category}/{filename}"
 
     def _do_upload_image(self, data: dict):
         local_path = data["local_path"]

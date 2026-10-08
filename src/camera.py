@@ -67,12 +67,14 @@ _BLANK_JPEG_BYTES = base64.b64decode(
 
 
 class Camera:
-    def __init__(self, config: dict):
+    def __init__(self, config: dict, base_dir: str | Path | None = None):
         cam_config = config.get("camera", {})
         self.plant_index = cam_config.get("plant_cam_index", 0)
         self.dashboard_index = cam_config.get("dashboard_cam_index", 1)
         self.resolution = tuple(cam_config.get("resolution", [1280, 720]))
         self.image_dir = Path(cam_config.get("image_dir", "data/images"))
+        if base_dir is not None and not self.image_dir.is_absolute():
+            self.image_dir = Path(base_dir) / self.image_dir
         self.image_dir.mkdir(parents=True, exist_ok=True)
         # Rotation: 0=none, 90=clockwise, 180=flip, 270=counter-clockwise
         self.plant_rotation = cam_config.get("plant_rotation", 0)

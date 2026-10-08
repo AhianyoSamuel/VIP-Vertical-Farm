@@ -219,6 +219,8 @@ Then clear the matching data in Firebase Console (Firestore + Storage).
 | GET | `/api/alerts` | Alert log |
 | GET | `/api/health` | Health check |
 
+Camera captures are stored under `data/images/` in the project directory. The website can display the latest plant and dashboard captures directly from the corresponding `GET /api/camera/.../latest` endpoints.
+
 ## AI Tools
 
 | Tool | Description |

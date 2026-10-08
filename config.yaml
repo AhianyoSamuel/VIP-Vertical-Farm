@@ -3,7 +3,7 @@
 plant:
   species: "Lettuce"
   variety: "Diversified Lettuce Tray"
-  planted_date: "2026-05-01"
+  planted_date: "2026-10-08"
   growth_stages:
     - name: "germination"
       typical_days: [0, 7]
